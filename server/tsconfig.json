@@ -11,5 +11,5 @@
     "sourceMap": true,
     "resolveJsonModule": true
   },
-  "include": ["src", "tests", "prisma/seed.ts", "vitest.config.ts"]
+  "include": ["src", "tests", "vitest.config.ts"]
 }

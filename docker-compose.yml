@@ -1,0 +1,36 @@
+# Run the whole app locally with one command:
+#   docker compose up --build
+# Then open http://localhost:8080
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: clinicq
+      POSTGRES_PASSWORD: clinicq
+      POSTGRES_DB: clinicq
+    ports:
+      - '5432:5432' # exposed so you can also run the API outside Docker (npm run dev)
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U clinicq -d clinicq']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  app:
+    build: .
+    environment:
+      DATABASE_URL: postgresql://clinicq:clinicq@db:5432/clinicq
+      JWT_SECRET: local-dev-secret-change-me-please
+      CLINIC_TZ: Asia/Kolkata
+      SEED_DEMO: 'true'
+    ports:
+      - '8080:4000'
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:
