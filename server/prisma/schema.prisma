@@ -1,0 +1,94 @@
+// Database schema. Run `npx prisma migrate deploy` to apply migrations.
+// The partial unique index that prevents double booking lives in the
+// migration SQL (Prisma's schema language can't express partial indexes).
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  PATIENT
+  STAFF
+  ADMIN
+}
+
+enum AppointmentStatus {
+  BOOKED
+  CHECKED_IN
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+model User {
+  id            Int            @id @default(autoincrement())
+  name          String
+  email         String         @unique
+  passwordHash  String
+  role          Role           @default(PATIENT)
+  createdAt     DateTime       @default(now())
+  appointments  Appointment[]
+  refreshTokens RefreshToken[]
+}
+
+model RefreshToken {
+  id        Int       @id @default(autoincrement())
+  userId    Int
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+}
+
+model Provider {
+  id           Int            @id @default(autoincrement())
+  name         String
+  specialty    String
+  slotMinutes  Int            @default(15)
+  active       Boolean        @default(true)
+  createdAt    DateTime       @default(now())
+  workingHours WorkingHours[]
+  appointments Appointment[]
+}
+
+/// Minutes since local midnight in CLINIC_TZ, e.g. 540 = 09:00.
+model WorkingHours {
+  id          Int      @id @default(autoincrement())
+  providerId  Int
+  provider    Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  dayOfWeek   Int // 0 = Sunday ... 6 = Saturday
+  startMinute Int
+  endMinute   Int
+
+  @@index([providerId, dayOfWeek])
+}
+
+model Appointment {
+  id          Int               @id @default(autoincrement())
+  patientId   Int? // null for walk-ins without an account
+  patient     User?             @relation(fields: [patientId], references: [id], onDelete: SetNull)
+  walkInName  String?
+  providerId  Int
+  provider    Provider          @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  startTime   DateTime // UTC
+  endTime     DateTime // UTC
+  status      AppointmentStatus @default(BOOKED)
+  isWalkIn    Boolean           @default(false)
+  checkedInAt DateTime?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  // Fast lookups for "doctor X's schedule on day Y" and "my appointments".
+  @@index([providerId, startTime])
+  @@index([patientId, startTime])
+}
