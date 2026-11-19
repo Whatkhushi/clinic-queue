@@ -112,6 +112,10 @@ npm install
 npm run dev            # http://localhost:5173 (proxies /api to :4000)
 ```
 
+> **Windows without Docker:** `scripts/install-postgres-windows.ps1` installs PostgreSQL 16 and writes `server/.env` for you
+> (`powershell -ExecutionPolicy Bypass -File .\scripts\install-postgres-windows.ps1`).
+> If PowerShell says "running scripts is disabled", use `npm.cmd` instead of `npm`.
+
 ### Tests
 
 ```bash
